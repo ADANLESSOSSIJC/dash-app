@@ -90,13 +90,13 @@ importance_df = importance_df.sort_values(by='Importance', ascending=False)
 st.write(importance_df.head(10))
 
 # Visualiser les importances des caractéristiques
-#plt.figure(figsize=(10, 6))
-#plt.barh(importance_df['Feature'].head(10), importance_df['Importance'].head(10))
-#plt.xlabel('Importance')
-#plt.ylabel('Feature')
-#plt.title('Top 10 des caractéristiques importantes')
-#plt.gca().invert_yaxis()  # Inverser l'axe y pour avoir les plus importantes en haut
-#st.pyplot(plt.gcf())  # Utiliser plt.gcf() pour obtenir la figure actuelle
+plt.figure(figsize=(10, 6))
+plt.barh(importance_df['Feature'].head(10), importance_df['Importance'].head(10))
+plt.xlabel('Importance')
+plt.ylabel('Feature')
+plt.title('Top 10 des caractéristiques importantes')
+plt.gca().invert_yaxis()  # Inverser l'axe y pour avoir les plus importantes en haut
+st.pyplot(plt.gcf())  # Utiliser plt.gcf() pour obtenir la figure actuelle
 
 # Comparaison avec l'ensemble des clients
 st.subheader("Comparaison avec l'ensemble des clients")
