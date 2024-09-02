@@ -5,7 +5,9 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import GradientBoostingClassifier
 from imblearn.over_sampling import SMOTE
 from imblearn.pipeline import Pipeline as ImbPipeline
+from sklearn.impute import SimpleImputer
 import matplotlib.pyplot as plt
+import shap
 
 # Chemin vers le fichier de données
 file_path = 'clean_data.csv'
@@ -21,6 +23,12 @@ def load_data():
 def train_model(data):
     x = data.drop(['TARGET', 'SK_ID_CURR'], axis=1)
     y = data['TARGET']
+
+    # Imputation des valeurs manquantes (si nécessaire)
+    imputer = SimpleImputer(strategy='mean')
+    x = pd.DataFrame(imputer.fit_transform(x), columns=x.columns)
+
+    # Split des données en ensembles d'entraînement et de test
     x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
 
     # Définir le pipeline avec SMOTE, StandardScaler et GradientBoostingClassifier
@@ -47,6 +55,12 @@ def train_model(data):
 def predict_score(model, client_data):
     score = model.predict_proba(client_data)[:, 1]
     return score[0]
+
+# Fonction pour obtenir l'importance des caractéristiques spécifique à un client donné
+def get_shap_values(model, data, client_data):
+    explainer = shap.Explainer(model.named_steps['clf'], data)
+    shap_values = explainer(client_data)
+    return shap_values
 
 # Chargement des données
 data = load_data()
@@ -75,18 +89,18 @@ else:
 st.subheader("Informations descriptives du client")
 st.write(client_data)
 
-# Afficher les variables importantes du client choisi
+# Afficher les variables importantes pour le client choisi
 st.subheader("Variables importantes pour le client choisi")
 
-# Obtenir les importances des caractéristiques du modèle
-importances = model.named_steps['clf'].feature_importances_
-feature_names = client_data.columns
-importance_df = pd.DataFrame({'Feature': feature_names, 'Importance': importances})
-
-# Trier les caractéristiques par importance
-importance_df = importance_df.sort_values(by='Importance', ascending=False)
+# Obtenir les valeurs SHAP pour le client sélectionné
+shap_values = get_shap_values(model, data.drop(['TARGET', 'SK_ID_CURR'], axis=1), client_data)
 
 # Afficher les 10 principales caractéristiques
+importance_df = pd.DataFrame({
+    'Feature': client_data.columns,
+    'Importance': shap_values.values[0]
+}).sort_values(by='Importance', ascending=False)
+
 st.write(importance_df.head(10))
 
 # Visualiser les importances des caractéristiques
@@ -94,9 +108,12 @@ plt.figure(figsize=(10, 6))
 plt.barh(importance_df['Feature'].head(10), importance_df['Importance'].head(10))
 plt.xlabel('Importance')
 plt.ylabel('Feature')
-plt.title('Top 10 des caractéristiques importantes')
+plt.title('Top 10 des caractéristiques importantes pour le client')
 plt.gca().invert_yaxis()  # Inverser l'axe y pour avoir les plus importantes en haut
-st.pyplot(plt.gcf())  # Utiliser plt.gcf() pour obtenir la figure actuelle
+
+plt.tight_layout()  # Ajuster la mise en page pour éviter les chevauchements
+st.pyplot(plt.gcf())  # Afficher la figure dans Streamlit
+plt.close()  # Fermer la figure pour libérer de la mémoire
 
 # Comparaison avec l'ensemble des clients
 st.subheader("Comparaison avec l'ensemble des clients")
