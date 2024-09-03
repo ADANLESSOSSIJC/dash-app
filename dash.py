@@ -5,7 +5,6 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.ensemble import GradientBoostingClassifier
 from imblearn.over_sampling import SMOTE
 from imblearn.pipeline import Pipeline as ImbPipeline
-from sklearn.impute import SimpleImputer
 import matplotlib.pyplot as plt
 import shap
 
@@ -23,10 +22,6 @@ def load_data():
 def train_model(data):
     x = data.drop(['TARGET', 'SK_ID_CURR'], axis=1)
     y = data['TARGET']
-
-    # Imputation des valeurs manquantes (si nécessaire)
-    imputer = SimpleImputer(strategy='mean')
-    x = pd.DataFrame(imputer.fit_transform(x), columns=x.columns)
 
     # Split des données en ensembles d'entraînement et de test
     x_train, x_test, y_train, y_test = train_test_split(x, y, test_size=0.2, random_state=42)
@@ -81,13 +76,56 @@ st.write(f"Score pour le client {client_id}: {score:.2f}")
 
 # Interprétation du score
 if score > 0.5:
-    st.write("Interprétation : Risque élevé")
+    st.write("Interprétation : Risque élevé - Crédit réfusé")
 else:
-    st.write("Interprétation : Risque faible")
+    st.write("Interprétation : Risque faible - Crédit accepté")
 
 # Informations descriptives relatives au client
 st.subheader("Informations descriptives du client")
 st.write(client_data)
+
+# Comparaison du revenu du client au revenu moyen de tous les clients
+st.subheader("Comparaison du Revenu du Client avec le Revenu Moyen des Clients")
+client_income = client_data['AMT_INCOME_TOTAL'].values[0]
+average_income = data['AMT_INCOME_TOTAL'].mean()
+
+# Affichage des revenus en graphique à barres
+fig, ax = plt.subplots()
+ax.bar(['Revenu du Client', 'Revenu Moyen'], [client_income, average_income], color=['blue', 'green'])
+ax.set_ylabel('Revenu')
+ax.set_title('Comparaison du Revenu')
+st.pyplot(fig)  # Afficher la figure dans Streamlit
+
+# Comparaison du ratio revenu par rapport au crédit du client au ratio min, moyen et max de tous les clients
+st.subheader("Comparaison du Ratio Revenu/Crédit du Client avec le Min, Moyenne et Max de Tous les Clients")
+
+# Calcul du ratio revenu/crédit pour le client
+client_income_credit_perc = client_data['AMT_INCOME_TOTAL'].values[0] / client_data['AMT_CREDIT'].values[0]
+
+# Calcul des statistiques du ratio revenu/crédit pour tous les clients
+data['INCOME_CREDIT_PERC'] = data['AMT_INCOME_TOTAL'] / data['AMT_CREDIT']
+min_income_credit_perc = data['INCOME_CREDIT_PERC'].min()
+mean_income_credit_perc = data['INCOME_CREDIT_PERC'].mean()
+max_income_credit_perc = data['INCOME_CREDIT_PERC'].max()
+
+# Affichage des ratios en graphique à barres
+fig, ax = plt.subplots()
+bar_labels = ['Client', 'Min', 'Moyenne', 'Max']
+bar_values = [client_income_credit_perc, min_income_credit_perc, mean_income_credit_perc, max_income_credit_perc]
+bar_colors = ['blue', 'red', 'green', 'orange']
+
+# Créer les barres avec les étiquettes et la légende
+bars = ax.bar(bar_labels, bar_values, color=bar_colors)
+ax.set_ylabel('Ratio Revenu/Crédit')
+ax.set_title('Comparaison du Ratio Revenu/Crédit')
+ax.legend(bars, ['Client Sélectionné', 'Min Tous Clients', 'Moyenne Tous Clients', 'Max Tous Clients'])
+
+# Ajouter les étiquettes de valeur sur chaque barre
+for bar in bars:
+    yval = bar.get_height()
+    ax.text(bar.get_x() + bar.get_width()/2, yval + 0.01, round(yval, 2), ha='center', va='bottom')
+
+st.pyplot(fig)  # Afficher la figure dans Streamlit
 
 # Afficher les variables importantes pour le client choisi
 st.subheader("Variables importantes pour le client choisi")
